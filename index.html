@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>원소 기호 풍선 게임</title>
+    <title>원소 기호 풍선 게임 (태블릿 최적화)</title>
     <style>
+        * { box-sizing: border-box; }
         body { 
             margin: 0; 
             overflow: hidden; 
@@ -12,10 +13,10 @@
             font-family: 'Malgun Gothic', sans-serif; 
             display: flex;
             flex-direction: column;
-            height: 100vh; /* 전체 높이 고정 */
+            height: 100vh; /* 전체 높이 */
         }
         
-        /* 상단 점수 및 시간 UI */
+        /* 상단 UI 영역 */
         #ui { 
             display: flex;
             justify-content: center;
@@ -23,47 +24,52 @@
             padding: 10px;
             background: #f0f8ff;
             z-index: 10;
+            border-bottom: 1px solid #ddd;
         }
         .info { 
             font-size: 16px; 
             font-weight: bold; 
-            background: rgba(255,255,255,0.9); 
+            background: white; 
             padding: 5px 15px; 
             border-radius: 15px; 
             border: 2px solid #333; 
         }
 
-        /* 게임 영역: 키보드 제외 남은 공간을 꽉 채움 */
+        /* 게임 캔버스 영역: Flex를 사용하여 남은 공간 차지 */
         #canvas-container {
             flex: 1;
             position: relative;
-            width: 100%;
-            background: #fff;
+            background: #ffffff;
             overflow: hidden;
+            width: 100%;
         }
         canvas { 
-            display: block;
-            width: 100%;
+            display: block; 
+            width: 100%; 
             height: 100%;
         }
 
-        /* 입력 영역: 하단에 고정 */
+        /* 하단 입력 영역: 키보드 바로 위에 위치하게 됨 */
         #input-box { 
             padding: 10px;
             background: #f0f8ff;
-            border-top: 1px solid #ccc;
+            border-top: 2px solid #333;
+            display: flex;
+            justify-content: center;
             z-index: 10;
         }
         input { 
-            font-size: 20px; 
-            padding: 10px; 
+            font-size: 22px; 
+            padding: 12px; 
             border-radius: 10px; 
             border: 3px solid #333; 
-            width: 80%; 
-            max-width: 300px;
+            width: 100%; 
+            max-width: 400px;
             text-align: center; 
             outline: none; 
+            background: white;
         }
+        input:focus { border-color: #007bff; }
     </style>
 </head>
 <body>
@@ -78,7 +84,7 @@
     </div>
 
     <div id="input-box">
-        <input type="text" id="answer" placeholder="기호 입력" autofocus autocomplete="off">
+        <input type="text" id="answer" placeholder="여기에 기호 입력" autofocus autocomplete="off">
     </div>
 
     <script>
@@ -89,10 +95,18 @@
         const timerElement = document.getElementById('timer');
         const inputElement = document.getElementById('answer');
 
-        // 캔버스 크기를 컨테이너 크기에 맞추는 함수
+        // 캔버스 크기 조정 함수 (키보드 대응 핵심)
         function resizeCanvas() {
+            // 부모 컨테이너의 실제 높이에 맞춰 캔버스 해상도 조절
             canvas.width = container.clientWidth;
             canvas.height = container.clientHeight;
+        }
+
+        // 키보드가 올라와서 뷰포트 크기가 변할 때마다 실행
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                resizeCanvas();
+            });
         }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
@@ -117,6 +131,8 @@
         class Balloon {
             constructor() {
                 const currentFirstLetters = balloons.map(b => b.symbol.charAt(0));
+                
+                // 중복 원소 및 중복 첫 글자 방지 로직
                 const availableElements = elements.filter(el => {
                     const isNameDuplicate = balloons.some(b => b.name === el.name);
                     const isFirstLetterDuplicate = currentFirstLetters.includes(el.symbol.charAt(0));
@@ -129,11 +145,11 @@
 
                 this.name = el.name;
                 this.symbol = el.symbol;
-                this.x = Math.random() * (canvas.width - 80) + 40;
+                this.x = Math.random() * (canvas.width - 100) + 50;
                 this.y = -50;
-                this.baseSize = canvas.width < 500 ? 35 : 45; // 화면 너비에 따라 크기 조절
+                this.baseSize = canvas.width < 500 ? 30 : 40; 
                 this.size = this.baseSize;
-                this.speed = Math.random() * 0.5 + 0.4; 
+                this.speed = Math.random() * 0.4 + 0.3; // 더 느리게 설정
                 this.color = `hsl(${Math.random() * 360}, 75%, 65%)`;
             }
 
@@ -160,8 +176,8 @@
 
             update() {
                 this.y += this.speed;
-                // 크기 변화폭을 화면 높이에 맞게 조절
-                this.size = this.baseSize + (this.y / canvas.height) * 30;
+                // 내려올수록 커짐
+                this.size = this.baseSize + (this.y / canvas.height) * 35;
             }
         }
 
@@ -174,7 +190,7 @@
                 timerElement.innerText = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
                 if (timeLeft <= 0) {
                     gameActive = false;
-                    alert(`시간 종료! 최종 점수: ${score}점`);
+                    alert(`시간 종료!\n최종 점수: ${score}점`);
                     location.reload();
                 }
             }, 1000);
@@ -183,7 +199,7 @@
         function spawnBalloon() {
             if (gameActive) {
                 if (balloons.length < 5) balloons.push(new Balloon());
-                setTimeout(spawnBalloon, 1800);
+                setTimeout(spawnBalloon, 2000);
             }
         }
 
@@ -193,6 +209,7 @@
             for (let i = balloons.length - 1; i >= 0; i--) {
                 balloons[i].update();
                 balloons[i].draw();
+                // 바닥(입력창 바로 위)에 닿으면 사라짐
                 if (balloons[i].y - balloons[i].size > canvas.height) {
                     balloons.splice(i, 1);
                 }
